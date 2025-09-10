@@ -1,0 +1,46 @@
+import { NextResponse } from "next/server"
+import { prisma } from "@/lib/db"
+
+export async function GET() {
+  try {
+    console.log("[v0] Testing database connection...")
+
+    // Test basic connection
+    await prisma.$connect()
+    console.log("[v0] ✅ Prisma client connected")
+
+    // Test raw query to see if database exists
+    const result = await prisma.$queryRaw`SELECT current_database(), current_user, version()`
+    console.log("[v0] ✅ Database info:", result)
+
+    // Test if tables exist
+    const tables = await prisma.$queryRaw`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public'
+    `
+    console.log("[v0] ✅ Available tables:", tables)
+
+    // Test if User model exists in Prisma
+    const userCount = await prisma.user.count()
+    console.log("[v0] ✅ User table accessible, count:", userCount)
+
+    return NextResponse.json({
+      success: true,
+      database: result,
+      tables: tables,
+      userCount: userCount,
+    })
+  } catch (error) {
+    console.error("[v0] ❌ Database test failed:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        error: error.message,
+        stack: error.stack,
+        name: error.name,
+      },
+      { status: 500 },
+    )
+  }
+}
